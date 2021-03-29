@@ -74,21 +74,6 @@ void set_costum_theme(Xputty *main) {
 
 #include "lv2_plugin.cc"
 
-void get_note(Widget_t *w, const int *key, const bool on_off) {
-    X11_UI *ui = (X11_UI*) w->parent_struct;
-    uint8_t obj_buf[OBJ_BUF_SIZE];
-    lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
-    LV2_Atom_Forge_Frame frame;
-    LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&ui->forge, &frame, 0, ui->patch_Set);
-    lv2_atom_forge_key(&ui->forge, ui->patch_property);
-    lv2_atom_forge_urid(&ui->forge, on_off? ui->note_on : ui->note_off);
-    lv2_atom_forge_key(&ui->forge, ui->patch_value);    
-    lv2_atom_forge_int(&ui->forge, (int)(*key));
-    lv2_atom_forge_pop(&ui->forge, &frame);
-    ui->write_function(ui->controller, 0, lv2_atom_total_size(msg),
-                       ui->atom_eventTransfer, msg);
-}
-
 void send_vec(Widget_t *w, const int *key, const bool on_off) {
     X11_UI *ui = (X11_UI*) w->parent_struct;
     uint8_t obj_buf[OBJ_BUF_SIZE];
@@ -236,12 +221,6 @@ void on_idle(LV2UI_Handle handle) {
 
 void plugin_cleanup(X11_UI *ui) {
     // clean up used sources when needed
-}
-
-int get_u_from_urid(X11_UI *ui, const LV2_URID urid) {
-    if ( urid == ui->note_on) return 1;
-    else if ( urid == ui->note_off) return 2;
-    else return 3;
 }
 
 void plugin_port_event(LV2UI_Handle handle, uint32_t port_index,

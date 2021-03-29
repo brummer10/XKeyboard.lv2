@@ -50,10 +50,10 @@ private:
     LV2_URID atom_Int;
     LV2_URID atom_Vector;
 
-    LV2_Atom                     midiatom; 
-    LV2_Atom_Forge               forge;
-    LV2_Atom_Forge_Frame         frame;
-    uint8_t                      data[3];
+    LV2_Atom midiatom; 
+    LV2_Atom_Forge forge;
+    LV2_Atom_Forge_Frame frame;
+    uint8_t data[3];
 
     // private functions
     void write_vector(LV2_URID urid, int value, int channel, int on_off);
@@ -129,21 +129,23 @@ void Xxkeyboard::deactivate_f()
     // delete the internal DSP mem
 }
 
+// send midi data to the midi output port 
 void Xxkeyboard::send_midi_data(int count, uint8_t controller,
                              uint8_t note, uint8_t velocity)
 {
-  if(!midi_out) return;
-  data[0] = controller;
-  data[1] = note;
-  data[2] = velocity; 
-  lv2_atom_forge_frame_time(&forge,count);
-  lv2_atom_forge_raw(&forge,&midiatom,sizeof(LV2_Atom));
-  lv2_atom_forge_raw(&forge,data, sizeof(data));
-  lv2_atom_forge_pad(&forge,sizeof(data)+sizeof(LV2_Atom)); 
+    if(!midi_out) return;
+    data[0] = controller;
+    data[1] = note;
+    data[2] = velocity; 
+    lv2_atom_forge_frame_time(&forge,count);
+    lv2_atom_forge_raw(&forge,&midiatom,sizeof(LV2_Atom));
+    lv2_atom_forge_raw(&forge,data, sizeof(data));
+    lv2_atom_forge_pad(&forge,sizeof(data)+sizeof(LV2_Atom)); 
 }
 
-void Xxkeyboard::write_vector(LV2_URID urid, int value, int channel, int on_off) {
-
+// inform the UI about incoming midi events
+void Xxkeyboard::write_vector(LV2_URID urid, int value, int channel, int on_off)
+{
     int vec[3];
     vec[0] = value;
     vec[1] = channel;
@@ -155,9 +157,9 @@ void Xxkeyboard::write_vector(LV2_URID urid, int value, int channel, int on_off)
     lv2_atom_forge_property_head(&forge, atom_Vector,0);
     lv2_atom_forge_vector(&forge, sizeof(int), atom_Int, 3, (void*)vec);
     lv2_atom_forge_pop(&forge, &frame);
-
 }
 
+// run the event loop
 void Xxkeyboard::run_dsp_(uint32_t n_samples)
 {
     if(n_samples<1) return;
@@ -221,6 +223,7 @@ void Xxkeyboard::run_dsp_(uint32_t n_samples)
     }
 }
 
+// connect ports needed in the plugin
 void Xxkeyboard::connect_all__ports(uint32_t port, void* data)
 {
     // connect the Ports used by the plug-in class
@@ -229,6 +232,7 @@ void Xxkeyboard::connect_all__ports(uint32_t port, void* data)
 
 ////////////////////// STATIC CLASS  FUNCTIONS  ////////////////////////
 
+// instantiate the plugin class, init the needed URI's
 LV2_Handle 
 Xxkeyboard::instantiate(const LV2_Descriptor* descriptor,
                             double rate, const char* bundle_path,
@@ -251,16 +255,16 @@ Xxkeyboard::instantiate(const LV2_Descriptor* descriptor,
     }
     self->map = map;
     lv2_atom_forge_init(&self->forge,self->map);
-    self->midi_MidiEvent          = map->map(map->handle, LV2_MIDI__MidiEvent);
-    self->patch_Set               = map->map(map->handle, LV2_PATCH__Set);
-    self->patch_property          = map->map(map->handle, LV2_PATCH__property);
-    self->patch_value             = map->map(map->handle, LV2_PATCH__value);
-    self->note_on                 = map->map(map->handle, XKeyboard__note_on);
-    self->note_off                = map->map(map->handle, XKeyboard__note_off);
-    self->atom_Int                = map->map(map->handle, LV2_ATOM__Int);
-    self->atom_Vector             = map->map(map->handle, LV2_ATOM__Vector);
-    self->midiatom.type = self->midi_MidiEvent;
-    self->midiatom.size = sizeof(self->data);
+    self->midi_MidiEvent = map->map(map->handle, LV2_MIDI__MidiEvent);
+    self->patch_Set      = map->map(map->handle, LV2_PATCH__Set);
+    self->patch_property = map->map(map->handle, LV2_PATCH__property);
+    self->patch_value    = map->map(map->handle, LV2_PATCH__value);
+    self->note_on        = map->map(map->handle, XKeyboard__note_on);
+    self->note_off       = map->map(map->handle, XKeyboard__note_off);
+    self->atom_Int       = map->map(map->handle, LV2_ATOM__Int);
+    self->atom_Vector    = map->map(map->handle, LV2_ATOM__Vector);
+    self->midiatom.type  = self->midi_MidiEvent;
+    self->midiatom.size  = sizeof(self->data);
     self->init_dsp_((uint32_t)rate);
     return (LV2_Handle)self;
 }
