@@ -1,0 +1,72 @@
+
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix lv2: <http://lv2plug.in/ns/lv2core#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix guiext: <http://lv2plug.in/ns/extensions/ui#>.
+@prefix time: <http://lv2plug.in/ns/ext/time#>.
+@prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
+@prefix pprop: <http://lv2plug.in/ns/ext/port-props#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
+@prefix patch: <http://lv2plug.in/ns/ext/patch#> .
+@prefix xkey:  <https://github.com/brummer10/XKeyboard_ui#>  .
+
+
+<urn:name#me>
+   a foaf:Person ;
+   foaf:name "brummer" .
+
+<https://github.com/brummer10/XKeyboard>
+   a lv2:Plugin ,
+       lv2:MixerPlugin ;
+   doap:maintainer <urn:name#me> ;
+   doap:name "XKeyboard" ;
+   lv2:project <https://github.com/brummer10/XKeyboard> ;
+   lv2:requiredFeature urid:map ;
+   lv2:optionalFeature lv2:hardRTCapable ;
+   lv2:minorVersion 1 ;
+   lv2:microVersion 0 ;
+
+guiext:ui <https://github.com/brummer10/XKeyboard_ui> ;
+
+rdfs:comment """
+...
+""";
+
+   lv2:port  [
+      a lv2:InputPort ,
+          atom:AtomPort ;
+      atom:bufferType atom:Sequence ;
+      atom:supports midi:MidiEvent ,
+           patch:Message ;
+      lv2:designation lv2:control ;
+      lv2:index 0 ;
+      lv2:symbol "MIDI_IN" ;
+      lv2:name "MIDI_IN" ;
+   ], [
+      a lv2:OutputPort ,
+          atom:AtomPort ;
+      atom:bufferType atom:Sequence ;
+      atom:supports midi:MidiEvent ,
+           patch:Message ;
+      lv2:designation lv2:control ;
+      lv2:index 1 ;
+      lv2:symbol "MIDI_OUT" ;
+      lv2:name "MIDI_OUT" ;
+   ] .
+
+<https://github.com/brummer10/XKeyboard_ui>
+   a guiext:X11UI;
+   guiext:binary <XKeyboard_ui.so> ;
+       lv2:extensionData guiext::idle ;
+       lv2:extensionData guiext:resize ;
+       lv2:extensionData guiext:idleInterface ;
+       lv2:requiredFeature guiext:idleInterface ;
+    guiext:portNotification [
+            guiext:plugin  <https://github.com/brummer10/XKeyboard> ;
+            lv2:symbol "MIDI_IN" ;
+            guiext:notifyType atom:Blank
+        ] .
