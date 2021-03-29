@@ -52,7 +52,6 @@ rdfs:comment """
       atom:bufferType atom:Sequence ;
       atom:supports midi:MidiEvent ,
            patch:Message ;
-      lv2:designation lv2:control ;
       lv2:index 1 ;
       lv2:symbol "MIDI_OUT" ;
       lv2:name "MIDI_OUT" ;
