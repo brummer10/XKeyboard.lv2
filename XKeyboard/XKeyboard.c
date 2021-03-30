@@ -216,7 +216,14 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
 
 void on_idle(LV2UI_Handle handle) {
     X11_UI* ui = (X11_UI*)handle;
-    expose_widget(ui->widget[0]);
+    MidiKeyboard *keys = (MidiKeyboard*)ui->widget[0]->parent_struct;
+    bool repeat = need_redraw(keys);
+    if (repeat || ui->run_one_more) {
+        expose_widget(ui->widget[0]);
+        if (repeat)
+            ui->run_one_more = 10;
+    }
+    ui->run_one_more = max(0,ui->run_one_more-1);
 }
 
 void plugin_cleanup(X11_UI *ui) {
@@ -231,8 +238,7 @@ void plugin_port_event(LV2UI_Handle handle, uint32_t port_index,
         MidiKeyboard *keys = (MidiKeyboard*)ui->widget[0]->parent_struct;
         const LV2_Atom* atom = (LV2_Atom*)buffer;
         if (atom->type == ui->atom_Object) {
-            const LV2_Atom_Object* obj      = (LV2_Atom_Object*)atom;
-            
+            const LV2_Atom_Object* obj = (LV2_Atom_Object*)atom;
             if (obj->body.otype == ui->atom_Int) {
                 const LV2_Atom* vector_data = NULL;
                 const int n_props  = lv2_atom_object_get(obj,ui->atom_Vector, &vector_data, NULL);

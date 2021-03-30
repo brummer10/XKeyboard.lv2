@@ -100,6 +100,7 @@ typedef struct {
     KnobColors *kp;
     void *private_ptr;
     int need_resize;
+    int run_one_more;
 
     void *controller;
     LV2UI_Write_Function write_function;

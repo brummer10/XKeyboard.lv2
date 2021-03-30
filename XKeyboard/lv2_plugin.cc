@@ -88,6 +88,7 @@ static void draw_window(void *w_, void* user_data) {
 static void draw_lv2_knob(void *w_, void* user_data) {
     Widget_t *w = (Widget_t*)w_;
     X11_UI* ui = (X11_UI*)w->parent_struct;
+    ui->run_one_more = 10;
     int width = w->width-2;
     int height = w->height-2;
 
