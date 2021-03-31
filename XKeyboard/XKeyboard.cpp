@@ -170,14 +170,17 @@ void Xxkeyboard::run_dsp_(uint32_t n_samples)
     LV2_ATOM_SEQUENCE_FOREACH(midi_in, ev) {
         if (ev->body.type == midi_MidiEvent) {
             const uint8_t* const msg = (const uint8_t*)(ev + 1);
+            // forward incomming MIDI messages direct to midi_out
+            send_midi_data(0, msg[0], msg[1], msg[2]);
+            // fetch the MIDI message channel for display on the UI
             int channel = msg[0]&0x0f;
             switch (lv2_midi_message_type(msg)) {
             case LV2_MIDI_MSG_NOTE_ON:
-                send_midi_data(0, msg[0], msg[1], msg[2]);
+                // send message to UI on Note On
                 write_vector(note_on, msg[1], channel, 1);
             break;
             case LV2_MIDI_MSG_NOTE_OFF:
-                send_midi_data(0, msg[0], msg[1], msg[2]);
+                // send message to UI on Note Off
                 write_vector(note_off, msg[1], channel, 0);
             break;
             case LV2_MIDI_MSG_CONTROLLER:
@@ -205,6 +208,7 @@ void Xxkeyboard::run_dsp_(uint32_t n_samples)
             break;
             }
         } else {
+            // receive a Note On/Off message from the UI, forward it to midi_out
             const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
             if (obj->body.otype == atom_Int) {
                 const LV2_Atom* vector_data = NULL;

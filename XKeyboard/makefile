@@ -46,6 +46,7 @@
 	-shared -lm -fPIC -Wl,-z,noexecstack -Wl,--no-undefined -Wl,--gc-sections
 	CFLAGS := -O2 -D_FORTIFY_SOURCE=2 -Wall -fstack-protector -fvisibility=hidden \
 	-fdata-sections -Wl,--gc-sections -Wl,-z,relro,-z,now -Wl,--exclude-libs,ALL
+	DEBUG_CFLAGS += -g -D DEBUG
 
 .PHONY : all install uninstall
 
@@ -58,6 +59,9 @@ all: $(RESOURCEHEADER) $(EXEC_NAME)
 	@cp ./*.so ./$(BUNDLE)
 	@if [ -f ./$(BUNDLE)/$(EXEC_NAME).so ]; then echo "build finish, now run make install"; \
 	else echo "sorry, build failed"; fi
+
+debug: CFLAGS = $(DEBUG_CFLAGS)
+debug: all
 
 $(RESOURCEHEADER): $(RESOURCES_OBJ)
 	rm -f $(RESOURCEHEADER)
