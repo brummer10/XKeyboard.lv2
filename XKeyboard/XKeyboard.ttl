@@ -67,5 +67,5 @@ rdfs:comment """
     guiext:portNotification [
             guiext:plugin  <https://github.com/brummer10/XKeyboard> ;
             lv2:symbol "MIDI_IN" ;
-            guiext:notifyType atom:Blank
+            guiext:notifyType atom:Blank ;
         ] .

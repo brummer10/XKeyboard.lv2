@@ -75,21 +75,10 @@ typedef int PortIndex;
 typedef struct {
     LV2_URID midi_MidiEvent;
     LV2_URID_Map* map;
-    LV2_Atom_Sequence* midi_out;
-    LV2_URID patch_Set;
-    LV2_URID patch_property;
-    LV2_URID patch_value;
-    LV2_URID note_on;
-    LV2_URID note_off;
-    LV2_URID atom_Int;
-    LV2_URID atom_Vector;
-    LV2_URID atom_Object;
-
-    LV2_Atom                     midiatom; 
-    LV2_Atom_Forge               forge;
-    LV2_Atom_Forge_Frame         frame;
-    uint8_t                      data[3];
     LV2_URID atom_eventTransfer;
+
+    LV2_Atom midiatom; 
+    LV2_Atom_Forge forge;
 
     void *parentXwindow;
     Xputty main;

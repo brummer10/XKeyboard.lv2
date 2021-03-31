@@ -418,20 +418,14 @@ static LV2UI_Handle instantiate(const LV2UI_Descriptor * descriptor,
         free(ui);
         return NULL;
     }
+
     ui->map = map;
     lv2_atom_forge_init(&ui->forge,ui->map);
+    ui->atom_eventTransfer  = map->map(map->handle, LV2_ATOM__eventTransfer);
     ui->midi_MidiEvent = map->map(map->handle, LV2_MIDI__MidiEvent);
     ui->midiatom.type = ui->midi_MidiEvent;
-    ui->midiatom.size = sizeof(ui->data);
-    ui->atom_eventTransfer  = map->map(map->handle, LV2_ATOM__eventTransfer);
-    ui->patch_Set               = map->map(map->handle, LV2_PATCH__Set);
-    ui->patch_property          = map->map(map->handle, LV2_PATCH__property);
-    ui->patch_value             = map->map(map->handle, LV2_PATCH__value);
-    ui->note_on                 = map->map(map->handle, XKeyboard__note_on);
-    ui->note_off                = map->map(map->handle, XKeyboard__note_off);
-    ui->atom_Int                = map->map(map->handle, LV2_ATOM__Int);
-    ui->atom_Vector             = map->map(map->handle, LV2_ATOM__Vector);
-    ui->atom_Object             = map->map(map->handle, LV2_ATOM__Object);
+    ui->midiatom.size = 3;
+
     // init Xputty
     main_init(&ui->main);
     ui->kp = (KnobColors*)malloc(sizeof(KnobColors));

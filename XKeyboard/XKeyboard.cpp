@@ -42,21 +42,12 @@ private:
     const LV2_Atom_Sequence* midi_in;
     LV2_Atom_Sequence* midi_out;
 
-    LV2_URID patch_Set;
-    LV2_URID patch_property;
-    LV2_URID patch_value;
-    LV2_URID note_on;
-    LV2_URID note_off;
-    LV2_URID atom_Int;
-    LV2_URID atom_Vector;
-
     LV2_Atom midiatom; 
     LV2_Atom_Forge forge;
     LV2_Atom_Forge_Frame frame;
     uint8_t data[3];
 
     // private functions
-    void write_vector(LV2_URID urid, int value, int channel, int on_off);
     void send_midi_data(int count, uint8_t controller,
                              uint8_t note, uint8_t velocity);
     inline void run_dsp_(uint32_t n_samples);
@@ -143,22 +134,6 @@ void Xxkeyboard::send_midi_data(int count, uint8_t controller,
     lv2_atom_forge_pad(&forge,sizeof(data)+sizeof(LV2_Atom)); 
 }
 
-// inform the UI about incoming midi events
-void Xxkeyboard::write_vector(LV2_URID urid, int value, int channel, int on_off)
-{
-    int vec[3];
-    vec[0] = value;
-    vec[1] = channel;
-    vec[2] = on_off;
-    LV2_Atom_Forge_Frame frame;
-
-    lv2_atom_forge_frame_time(&forge, 0);
-    lv2_atom_forge_object(&forge, &frame, 1, atom_Int);
-    lv2_atom_forge_property_head(&forge, atom_Vector,0);
-    lv2_atom_forge_vector(&forge, sizeof(int), atom_Int, 3, (void*)vec);
-    lv2_atom_forge_pop(&forge, &frame);
-}
-
 // run the event loop
 void Xxkeyboard::run_dsp_(uint32_t n_samples)
 {
@@ -170,58 +145,7 @@ void Xxkeyboard::run_dsp_(uint32_t n_samples)
     LV2_ATOM_SEQUENCE_FOREACH(midi_in, ev) {
         if (ev->body.type == midi_MidiEvent) {
             const uint8_t* const msg = (const uint8_t*)(ev + 1);
-            // forward incomming MIDI messages direct to midi_out
             send_midi_data(0, msg[0], msg[1], msg[2]);
-            // fetch the MIDI message channel for display on the UI
-            int channel = msg[0]&0x0f;
-            switch (lv2_midi_message_type(msg)) {
-            case LV2_MIDI_MSG_NOTE_ON:
-                // send message to UI on Note On
-                write_vector(note_on, msg[1], channel, 1);
-            break;
-            case LV2_MIDI_MSG_NOTE_OFF:
-                // send message to UI on Note Off
-                write_vector(note_off, msg[1], channel, 0);
-            break;
-            case LV2_MIDI_MSG_CONTROLLER:
-                switch (msg[1]) {
-                    case LV2_MIDI_CTL_MSB_MODWHEEL:
-                    case LV2_MIDI_CTL_LSB_MODWHEEL:
-                        //vowel = (float) (msg[2]);
-                    break;
-                    case LV2_MIDI_CTL_ALL_SOUNDS_OFF:
-                    case LV2_MIDI_CTL_ALL_NOTES_OFF:
-                        //
-                    break;
-                    case LV2_MIDI_CTL_RESET_CONTROLLERS:
-                        //pitchbend = 0.0;
-                        //vowel = 0.0;
-                    break;
-                    default:
-                    break;
-                }
-            break;
-            case LV2_MIDI_MSG_BENDER:
-                //pitchbend = ((msg[2] << 7 | msg[1]) - 8192) * 0.00146484375;
-            break;
-            default:
-            break;
-            }
-        } else {
-            // receive a Note On/Off message from the UI, forward it to midi_out
-            const LV2_Atom_Object* obj = (LV2_Atom_Object*)&ev->body;
-            if (obj->body.otype == atom_Int) {
-                const LV2_Atom* vector_data = NULL;
-                const int n_props  = lv2_atom_object_get(obj,atom_Vector, &vector_data, NULL);
-                if (!n_props) return;
-                const LV2_Atom_Vector* vec = (LV2_Atom_Vector*)LV2_ATOM_BODY(vector_data);
-                if (vec->atom.type == atom_Int) {
-                    int n_elem = (vector_data->size - sizeof(LV2_Atom_Vector_Body)) / vec->atom.size;
-                    int* data;
-                    data = (int*) LV2_ATOM_BODY(&vec->atom);
-                    send_midi_data(0, data[0], data[1], data[2]);
-                }
-            }
         }
     }
 }
@@ -259,13 +183,6 @@ Xxkeyboard::instantiate(const LV2_Descriptor* descriptor,
     self->map = map;
     lv2_atom_forge_init(&self->forge,self->map);
     self->midi_MidiEvent = map->map(map->handle, LV2_MIDI__MidiEvent);
-    self->patch_Set      = map->map(map->handle, LV2_PATCH__Set);
-    self->patch_property = map->map(map->handle, LV2_PATCH__property);
-    self->patch_value    = map->map(map->handle, LV2_PATCH__value);
-    self->note_on        = map->map(map->handle, XKeyboard__note_on);
-    self->note_off       = map->map(map->handle, XKeyboard__note_off);
-    self->atom_Int       = map->map(map->handle, LV2_ATOM__Int);
-    self->atom_Vector    = map->map(map->handle, LV2_ATOM__Vector);
     self->midiatom.type  = self->midi_MidiEvent;
     self->midiatom.size  = sizeof(self->data);
     self->init_dsp_((uint32_t)rate);

@@ -74,22 +74,20 @@ void set_costum_theme(Xputty *main) {
 
 #include "lv2_plugin.cc"
 
-void send_vec(Widget_t *w, const int *key, const int control) {
+void send_midi_data(Widget_t *w, const int *key, const int control) {
     X11_UI *ui = (X11_UI*) w->parent_struct;
     uint8_t obj_buf[OBJ_BUF_SIZE];
-    int vec[3];
+    uint8_t vec[3];
     vec[0] = (int)control; // Note On/Off or controller number
     vec[0] |= (int)adj_get_value(ui->widget[2]->adj); //channel
     vec[1] = (*key); // note
     vec[2] = (int)adj_get_value(ui->widget[1]->adj); // velocity
     lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
-    LV2_Atom_Forge_Frame frame;
 
-    lv2_atom_forge_frame_time(&ui->forge, 0);
-    LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&ui->forge, &frame, 1, ui->atom_Int);
-    lv2_atom_forge_property_head(&ui->forge, ui->atom_Vector,0);
-    lv2_atom_forge_vector(&ui->forge, sizeof(int), ui->atom_Int, 3, (void*)vec);
-    lv2_atom_forge_pop(&ui->forge, &frame);
+    lv2_atom_forge_frame_time(&ui->forge,0);
+    LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_raw(&ui->forge,&ui->midiatom,sizeof(LV2_Atom));
+    lv2_atom_forge_raw(&ui->forge,vec, sizeof(vec));
+    lv2_atom_forge_pad(&ui->forge,sizeof(vec)+sizeof(LV2_Atom)); 
    
     ui->write_function(ui->controller, 0, lv2_atom_total_size(msg),
                        ui->atom_eventTransfer, msg);
@@ -156,7 +154,7 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     add_midi_keyboard(ui->widget[0], "", 0, 0, 616, 100);
     MidiKeyboard *keys = (MidiKeyboard*)ui->widget[0]->parent_struct;
 
-    keys->mk_send_note = send_vec;
+    keys->mk_send_note = send_midi_data;
     keys->mk_send_all_sound_off = get_all_notes_off;
     keys->layout = 0;
     keys->octave = 24;
@@ -237,23 +235,18 @@ void plugin_port_event(LV2UI_Handle handle, uint32_t port_index,
     if (format == ui->atom_eventTransfer) {
         MidiKeyboard *keys = (MidiKeyboard*)ui->widget[0]->parent_struct;
         const LV2_Atom* atom = (LV2_Atom*)buffer;
-        if (atom->type == ui->atom_Object) {
-            const LV2_Atom_Object* obj = (LV2_Atom_Object*)atom;
-            if (obj->body.otype == ui->atom_Int) {
-                const LV2_Atom* vector_data = NULL;
-                const int n_props  = lv2_atom_object_get(obj,ui->atom_Vector, &vector_data, NULL);
-                if (!n_props) return;
-                const LV2_Atom_Vector* vec = (LV2_Atom_Vector*)LV2_ATOM_BODY(vector_data);
-                if (vec->atom.type == ui->atom_Int) {
-                    //int n_elem = (vector_data->size - sizeof(LV2_Atom_Vector_Body)) / vec->atom.size;
-                    int* data;
-                    data = (int*) LV2_ATOM_BODY(&vec->atom);
-                    if ((data[2])) {
-                        set_key_in_matrix(keys->in_key_matrix[data[1]], data[0], true);
-                    } else {
-                        set_key_in_matrix(keys->in_key_matrix[data[1]], data[0], false);
-                    }
-                }
+        if (atom->type == ui->midi_MidiEvent) {
+            const uint8_t* const msg = (const uint8_t*)(atom + 1);
+            int channel = msg[0]&0x0f;
+            switch (lv2_midi_message_type(msg)) {
+                case LV2_MIDI_MSG_NOTE_ON:
+                    set_key_in_matrix(keys->in_key_matrix[channel], msg[1], true);
+                break;
+                case LV2_MIDI_MSG_NOTE_OFF:
+                    set_key_in_matrix(keys->in_key_matrix[channel], msg[1], false);
+                break;
+                default:
+                break;
             }
         }
     }
