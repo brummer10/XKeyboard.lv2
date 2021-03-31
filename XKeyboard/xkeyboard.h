@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 
-typedef void (*midikeyfunc)(Widget_t *w, const int *key, const bool on_off);
+typedef void (*midikeyfunc)(Widget_t *w, const int *key, const int on_off);
 typedef void (*midiwheelfunc)(Widget_t *w, const int *value);
 
 typedef struct {

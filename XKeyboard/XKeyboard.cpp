@@ -219,8 +219,7 @@ void Xxkeyboard::run_dsp_(uint32_t n_samples)
                     int n_elem = (vector_data->size - sizeof(LV2_Atom_Vector_Body)) / vec->atom.size;
                     int* data;
                     data = (int*) LV2_ATOM_BODY(&vec->atom);
-                    if ((data[2])) send_midi_data(0, 0x90 | data[1], data[0], data[3]);
-                    else send_midi_data(0, 0x80 | data[1], data[0], data[3]);
+                    send_midi_data(0, data[0], data[1], data[2]);
                 }
             }
         }

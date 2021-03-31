@@ -74,21 +74,21 @@ void set_costum_theme(Xputty *main) {
 
 #include "lv2_plugin.cc"
 
-void send_vec(Widget_t *w, const int *key, const bool on_off) {
+void send_vec(Widget_t *w, const int *key, const int control) {
     X11_UI *ui = (X11_UI*) w->parent_struct;
     uint8_t obj_buf[OBJ_BUF_SIZE];
-    int vec[4];
-    vec[0] = (*key);
-    vec[1] = (int)adj_get_value(ui->widget[2]->adj);
-    vec[2] = (int)on_off;
-    vec[3] = (int)adj_get_value(ui->widget[1]->adj);
+    int vec[3];
+    vec[0] = (int)control; // Note On/Off or controller number
+    vec[0] |= (int)adj_get_value(ui->widget[2]->adj); //channel
+    vec[1] = (*key); // note
+    vec[2] = (int)adj_get_value(ui->widget[1]->adj); // velocity
     lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
     LV2_Atom_Forge_Frame frame;
 
     lv2_atom_forge_frame_time(&ui->forge, 0);
     LV2_Atom* msg = (LV2_Atom*)lv2_atom_forge_object(&ui->forge, &frame, 1, ui->atom_Int);
     lv2_atom_forge_property_head(&ui->forge, ui->atom_Vector,0);
-    lv2_atom_forge_vector(&ui->forge, sizeof(int), ui->atom_Int, 4, (void*)vec);
+    lv2_atom_forge_vector(&ui->forge, sizeof(int), ui->atom_Int, 3, (void*)vec);
     lv2_atom_forge_pop(&ui->forge, &frame);
    
     ui->write_function(ui->controller, 0, lv2_atom_total_size(msg),
