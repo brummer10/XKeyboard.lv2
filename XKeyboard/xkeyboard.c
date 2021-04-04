@@ -291,10 +291,10 @@ void custom_to_midi_key(long custom_keys[128][2], long inkey, float *midi_key) {
     }
 }
 
-void add_major_chord(unsigned long *key_matrix, int inkey, bool set) {
+void add_major_chord(Widget_t* p, MidiKeyboard *keys, unsigned long *key_matrix, int inkey, bool set) {
     unsigned long *use_matrix = &key_matrix[0];
     int key = inkey + 4;
-    
+    int send_key = key;    
     if(key>94) {
         use_matrix = &key_matrix[3];
         key -=94;
@@ -307,11 +307,16 @@ void add_major_chord(unsigned long *key_matrix, int inkey, bool set) {
     }
     if (set) {
         (*use_matrix) |= (1 << key);
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x90, &send_key, keys->velocity);
     }else {
         (*use_matrix) &= (~(1 << key));
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x80, &send_key, keys->velocity);
     }
 
     key = inkey + 7;
+    send_key = key;
     if(key>94) {
         use_matrix = &key_matrix[3];
         key -=94;
@@ -324,15 +329,19 @@ void add_major_chord(unsigned long *key_matrix, int inkey, bool set) {
     }
     if (set) {
         (*use_matrix) |= (1 << key);
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x90, &send_key, keys->velocity);
     }else {
         (*use_matrix) &= (~(1 << key));
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x80, &send_key, keys->velocity);
     }
 }
 
-void add_minor_chord(unsigned long *key_matrix, int inkey, bool set) {
+void add_minor_chord(Widget_t* p, MidiKeyboard *keys, unsigned long *key_matrix, int inkey, bool set) {
     unsigned long *use_matrix = &key_matrix[0];
     int key = inkey + 3;
-    
+    int send_key = key;
     if(key>94) {
         use_matrix = &key_matrix[3];
         key -=94;
@@ -345,11 +354,16 @@ void add_minor_chord(unsigned long *key_matrix, int inkey, bool set) {
     }
     if (set) {
         (*use_matrix) |= (1 << key);
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x90, &send_key, keys->velocity);
     }else {
         (*use_matrix) &= (~(1 << key));
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x80, &send_key, keys->velocity);
     }
 
     key = inkey + 7;
+    send_key = key;
     if(key>94) {
         use_matrix = &key_matrix[3];
         key -=94;
@@ -362,8 +376,12 @@ void add_minor_chord(unsigned long *key_matrix, int inkey, bool set) {
     }
     if (set) {
         (*use_matrix) |= (1 << key);
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x90, &send_key, keys->velocity);
     }else {
         (*use_matrix) &= (~(1 << key));
+        if (send_key>=0 && send_key<128)
+            keys->mk_send_note(p, 0x80, &send_key, keys->velocity);
     }
 }
 
@@ -773,29 +791,34 @@ static void key_press(void *w_, void *key_, void *user_data) {
     if (!w) return;
     MidiKeyboard *keys = (MidiKeyboard*)w->parent_struct;
     XKeyEvent *key = (XKeyEvent*)key_;
+    int chord = 0;
     if (!key) return;
-    if (key->state & ControlMask) {
-        p->func.key_press_callback(p, key_, user_data);
-    } else {
-        float outkey = 0.0;
-        KeySym sym = XLookupKeysym (key, 0);
-        get_outkey(keys, sym, &outkey);
-
-        if ((int)outkey && !is_key_in_matrix(keys->key_matrix, (int)outkey+keys->octave)) {
-            set_key_in_matrix(keys->key_matrix,(int)outkey+keys->octave,true);
-            keys->send_key = (int)outkey+keys->octave;
-            if (keys->send_key>=0 && keys->send_key<128)
-                keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
-            //expose_widget(w);
-        } 
-        if (sym == XK_space) {
-            clear_key_matrix(&keys->key_matrix[0]);
-            int i = 0;
-            for (;i<16;i++) clear_key_matrix(&keys->in_key_matrix[i][0]);
-            keys->mk_send_all_sound_off(p, NULL);
-            //expose_widget(w);
-        }
+    if (key->state & ShiftMask) {
+        chord = 1;
+    } else if (key->state & LockMask) {
+        chord = 2;
     }
+    float outkey = 0.0;
+    KeySym sym = XLookupKeysym (key, 0);
+    get_outkey(keys, sym, &outkey);
+
+    if ((int)outkey && !is_key_in_matrix(keys->key_matrix, (int)outkey+keys->octave)) {
+        set_key_in_matrix(keys->key_matrix,(int)outkey+keys->octave,true);
+        if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)outkey+keys->octave,true);
+        if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)outkey+keys->octave,true);
+        keys->send_key = (int)outkey+keys->octave;
+        if (keys->send_key>=0 && keys->send_key<128)
+            keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
+        //expose_widget(w);
+    } 
+    if (sym == XK_space) {
+        clear_key_matrix(&keys->key_matrix[0]);
+        int i = 0;
+        for (;i<16;i++) clear_key_matrix(&keys->in_key_matrix[i][0]);
+        keys->mk_send_all_sound_off(p, NULL);
+        //expose_widget(w);
+    }
+
 }
 
 static void key_release(void *w_, void *key_, void *user_data) {
@@ -805,11 +828,20 @@ static void key_release(void *w_, void *key_, void *user_data) {
     MidiKeyboard *keys = (MidiKeyboard*)w->parent_struct;
     XKeyEvent *key = (XKeyEvent*)key_;
     if (!key) return;
+    int chord = 0;
+    if (key->state & ShiftMask) {
+        //p->func.key_press_callback(p, key_, user_data);
+        chord = 1;
+    } else if (key->state & LockMask) {
+        chord = 2;
+    }
     float outkey = 0.0;
     KeySym sym = XLookupKeysym (key, 0);
     get_outkey(keys, sym, &outkey);
     if ((int)outkey && is_key_in_matrix(keys->key_matrix, (int)outkey+keys->octave)) {
         set_key_in_matrix(keys->key_matrix,(int)outkey+keys->octave,false);
+        if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)outkey+keys->octave,false);
+        if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)outkey+keys->octave,false);
         keys->send_key = (int)outkey+keys->octave;
         if (keys->send_key>=0 && keys->send_key<128)
             keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
