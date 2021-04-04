@@ -7,3 +7,5 @@ A simple LV2 MIDI keyboard
 
  - Display incomming MIDI notes
  - play virtual keyboard
+ - play Minor Chords when Shift is pressed
+ - play Major Chords when Shift-Lock is pressed
