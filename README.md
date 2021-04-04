@@ -9,3 +9,4 @@ A simple LV2 MIDI keyboard
  - play virtual keyboard
  - play Minor Chords when Shift is pressed
  - play Major Chords when Shift-Lock is pressed
+ - send All Notes Off when Space Bar is pressed
