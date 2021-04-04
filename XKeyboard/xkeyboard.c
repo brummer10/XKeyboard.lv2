@@ -663,6 +663,12 @@ static void keyboard_motion(void *w_, void* xmotion_, void* user_data) {
     int height = attrs.height;
 
     bool catchit = false;
+    int chord = 0;
+    if (xmotion->state & ShiftMask) {
+        chord = 1;
+    } else if (xmotion->state & LockMask) {
+        chord = 2;
+    }
 
     if(xmotion->y < height*0.59) {
         keys->in_motion = 1;
@@ -681,12 +687,17 @@ static void keyboard_motion(void *w_, void* xmotion_, void* user_data) {
                                 if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) 
                                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
                                 keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
+                                if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+                                if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
                             }
                             keys->active_key = keys->prelight_key;
                             keys->send_key = keys->active_key;
                             keys->last_active_key = keys->active_key;
-                            if (keys->send_key>=0 && keys->send_key<128)
+                            if (keys->send_key>=0 && keys->send_key<128) {
                                 keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
+                                if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+                                if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+                            }
                         }
                     }
                     catchit = true;
@@ -731,12 +742,17 @@ static void keyboard_motion(void *w_, void* xmotion_, void* user_data) {
                             if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) 
                                 set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
                             keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
+                            if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+                            if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
                         }
                         keys->active_key = keys->prelight_key;
                         keys->send_key = keys->active_key;
                         keys->last_active_key = keys->active_key;
-                        if (keys->send_key>=0 && keys->send_key<128)
+                        if (keys->send_key>=0 && keys->send_key<128) {
                             keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
+                            if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+                            if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+                        }
                     }
                 }
                 if (keys->prelight_key != keys->new_prelight_key ||
@@ -830,7 +846,6 @@ static void key_release(void *w_, void *key_, void *user_data) {
     if (!key) return;
     int chord = 0;
     if (key->state & ShiftMask) {
-        //p->func.key_press_callback(p, key_, user_data);
         chord = 1;
     } else if (key->state & LockMask) {
         chord = 2;
@@ -864,21 +879,34 @@ static void button_pressed_keyboard(void *w_, void* button_, void* user_data) {
     if (w->flags & HAS_POINTER) {
         MidiKeyboard *keys = (MidiKeyboard*)w->parent_struct;
         XButtonEvent *xbutton = (XButtonEvent*)button_;
+        int chord = 0;
+        if (xbutton->state & ShiftMask) {
+            chord = 1;
+        } else if (xbutton->state & LockMask) {
+            chord = 2;
+        }
         if(xbutton->button == Button1) {
             keys->active_key = keys->prelight_key;
             keys->send_key = keys->active_key;
             keys->last_active_key = keys->active_key;
-            if (keys->send_key>=0 && keys->send_key<128)
+            if (keys->send_key>=0 && keys->send_key<128) {
                 keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
+                if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+                if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+            }
             //expose_widget(w);
         } else if (xbutton->button == Button3) {
             keys->send_key = keys->prelight_key;
             if (keys->send_key>=0 && keys->send_key<128) {
                 if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) {
                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
+                    if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+                    if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
                     keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
                 } else {
                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,true);
+                    if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
+                    if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,true);
                     keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
                 }
             }
@@ -891,11 +919,19 @@ static void button_released_keyboard(void *w_, void* button_, void* user_data) {
     Widget_t *p = (Widget_t *)w->parent;
     MidiKeyboard *keys = (MidiKeyboard*)w->parent_struct;
     XButtonEvent *xbutton = (XButtonEvent*)button_;
+    int chord = 0;
+    if (xbutton->state & ShiftMask) {
+        chord = 1;
+    } else if (xbutton->state & LockMask) {
+        chord = 2;
+    }
     if (w->flags & HAS_POINTER) {
         if(xbutton->button == Button1) {
             keys->send_key = keys->active_key;
             if (keys->send_key>=0 && keys->send_key<128) {
                 keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
+                if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+                if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
                 if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) 
                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
             }
@@ -907,6 +943,8 @@ static void button_released_keyboard(void *w_, void* button_, void* user_data) {
             keys->send_key = keys->last_active_key;
             if (keys->send_key>=0 && keys->send_key<128) {
                 keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
+                if (chord == 1) add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+                if (chord == 2) add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
             }
             keys->last_active_key = -1;
         }
