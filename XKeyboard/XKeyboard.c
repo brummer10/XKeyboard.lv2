@@ -1,5 +1,5 @@
 
-#define CONTROLS 5
+#define CONTROLS 6
 
 #define GUI_ELEMENTS 0
 
@@ -74,14 +74,14 @@ void set_costum_theme(Xputty *main) {
 
 #include "lv2_plugin.cc"
 
-void send_vec(Widget_t *w, const int *key, const int control) {
+void send_vec(Widget_t *w, const int control, const int *key, const int value) {
     X11_UI *ui = (X11_UI*) w->parent_struct;
     uint8_t obj_buf[OBJ_BUF_SIZE];
     int vec[3];
     vec[0] = (int)control; // Note On/Off or controller number
     vec[0] |= (int)adj_get_value(ui->widget[2]->adj); //channel
     vec[1] = (*key); // note
-    vec[2] = (int)adj_get_value(ui->widget[1]->adj); // velocity
+    vec[2] = (int)value; // velocity
     lv2_atom_forge_set_buffer(&ui->forge, obj_buf, OBJ_BUF_SIZE);
     LV2_Atom_Forge_Frame frame;
 
@@ -93,6 +93,56 @@ void send_vec(Widget_t *w, const int *key, const int control) {
    
     ui->write_function(ui->controller, 0, lv2_atom_total_size(msg),
                        ui->atom_eventTransfer, msg);
+}
+
+void pitchwheel_callback(void *w_, void* user_data){
+    Widget_t *w = (Widget_t*)w_;
+    int value = (int)adj_get_value(w->adj);
+    int change = (int)(128 * value);
+    int low = change & 0x7f;  // Low 7 bits
+    int high = (change >> 7) & 0x7f;  // High 7 bits
+    send_vec(w, 0xE0,  &low, high);
+}
+
+void pitchwheel_press_callback(void *w_, void* button, void* user_data) {
+    Widget_t *w = (Widget_t*)w_;
+    X11_UI *ui = (X11_UI*) w->parent_struct;
+    XButtonEvent *xbutton = (XButtonEvent*)button;
+    if (xbutton->button == Button2) {
+        ui->pitch_scroll = 1;
+    }
+}
+
+void pitchwheel_release_callback(void *w_, void* button, void* user_data) {
+    Widget_t *w = (Widget_t*)w_;
+    X11_UI *ui = (X11_UI*) w->parent_struct;
+    XButtonEvent *xbutton = (XButtonEvent*)button;
+    if (xbutton->button == Button4 && ui->pitch_scroll) {
+        float value = min(w->adj->max_value,max(w->adj->min_value, 
+                                w->adj->value + (w->adj->step * 10)));
+        adj_set_value(w->adj,value);
+    } else if (xbutton->button == Button5 && ui->pitch_scroll) {
+        float value = min(w->adj->max_value,max(w->adj->min_value, 
+                                w->adj->value + (w->adj->step * -10)));
+        adj_set_value(w->adj,value);
+    } else if (xbutton->button == Button2) {
+        ui->pitch_scroll = 0;
+        adj_set_value(w->adj,64);
+    } else {
+        adj_set_value(w->adj,64);
+    }
+    int value = (int)adj_get_value(w->adj);
+    int change = (int)(128 * value);
+    int low = change & 0x7f;  // Low 7 bits
+    int high = (change >> 7) & 0x7f;  // High 7 bits
+    send_vec(w, 0xE0,  &low, high);
+}
+
+void velocity_callback(void *w_, void* user_data) {
+    Widget_t *w = (Widget_t*)w_;
+    X11_UI *ui = (X11_UI*) w->parent_struct;
+    MidiKeyboard *keys = (MidiKeyboard*)ui->widget[0]->parent_struct;
+    keys->velocity = (int)adj_get_value(w->adj);
 }
 
 void octave_callback(void *w_, void* user_data) {
@@ -123,7 +173,8 @@ void xkey_release(void *w_, void *key_, void *user_data) {
 }
 
 void get_all_notes_off(Widget_t *w, const int *value) {
-    
+    int v = 120;
+    send_vec(w, 0xB0, &v, 0);
 }
 
 void plugin_value_changed(X11_UI *ui, Widget_t *w, PortIndex index) {
@@ -163,15 +214,17 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     keys->key_size = 21;
     keys->key_offset = 13;
     
-    ui->widget[1] = add_lv2_knob(ui->widget[1], ui->win, -1, "Velocity", ui, 540, 0, 50, 70);
+    ui->widget[1] = add_lv2_knob(ui->widget[1], ui->win, -1, "Velocity", ui, 540, 5, 60, 70);
     ui->widget[1]->flags |= NO_AUTOREPEAT | NO_PROPAGATE;
     ui->widget[1]->parent_struct = ui;
     set_adjustment(ui->widget[1]->adj, 64.0, 64.0, 0.0, 127.0, 1.0, CL_CONTINUOS);
+    keys->velocity = (int)adj_get_value(ui->widget[1]->adj);
+    ui->widget[1]->func.value_changed_callback = velocity_callback;
     ui->widget[1]->func.key_press_callback = xkey_press;
     ui->widget[1]->func.key_release_callback = xkey_release;
 
-    add_label(ui->win, "Channel", 460, 5, 60, 20);
-    ui->widget[2] =  add_combobox(ui->win, _("Channel"), 460, 30, 60, 30);
+    add_label(ui->win, "Channel", 390, 5, 60, 20);
+    ui->widget[2] =  add_combobox(ui->win, _("Channel"), 390, 30, 60, 30);
     ui->widget[2]->flags |= NO_AUTOREPEAT | NO_PROPAGATE;
     ui->widget[2]->childlist->childs[0]->flags |= NO_AUTOREPEAT | NO_PROPAGATE;
     ui->widget[2]->scale.gravity = ASPECT;
@@ -212,6 +265,16 @@ void plugin_create_controller_widgets(X11_UI *ui, const char * plugin_uri) {
     ui->widget[4]->func.value_changed_callback = octave_callback;
     ui->widget[4]->func.key_press_callback = xkey_press;
     ui->widget[4]->func.key_release_callback = xkey_release;
+
+    ui->widget[5] = add_lv2_knob(ui->widget[5], ui->win, -1,  _("PitchBend"), ui, 470, 5, 60, 70);
+    ui->widget[5]->flags |= NO_AUTOREPEAT | NO_PROPAGATE;
+    set_adjustment(ui->widget[5]->adj,64.0, 64.0, 0.0, 127.0, 1.0, CL_CONTINUOS);
+    ui->widget[5]->parent_struct = ui;
+    ui->widget[5]->func.value_changed_callback = pitchwheel_callback;
+    ui->widget[5]->func.button_release_callback = pitchwheel_release_callback;
+    ui->widget[5]->func.button_press_callback = pitchwheel_press_callback;
+    ui->widget[5]->func.key_press_callback = xkey_press;
+    ui->widget[5]->func.key_release_callback = xkey_release;
 }
 
 void on_idle(LV2UI_Handle handle) {

@@ -64,13 +64,13 @@ static void set_default_theme(Xputty *main) {
 static void set_default_knob_color(KnobColors* kp) {
     *kp = (KnobColors) {
          /* cairo    / r  / g  / b  / a  /  */
-        /*p1f */       { 0.349, 0.313, 0.243, 1.0},
-        /*p2f */       { 0.349, 0.235, 0.011, 1.0},
+        /*p1f */       { 0.319, 0.319, 0.319, 1.0},
+        /*p2f */       { 0.235, 0.235, 0.235, 1.0},
         /*p3f */       { 0.15, 0.15, 0.15, 1.0},
         /*p4f */       { 0.1, 0.1, 0.1, 1.00},
         /*p5f */       { 0.05, 0.05, 0.05, 1.0},
-        /*p1k */       { 0.349, 0.313, 0.243, 1.0},
-        /*p2k */       { 0.349, 0.235, 0.011, 1.0},
+        /*p1k */       { 0.319, 0.319, 0.319, 1.0},
+        /*p2k */       { 0.235, 0.235, 0.235, 1.0},
         /*p3k */       { 0.15, 0.15, 0.15, 1.0},
         /*p4k */       { 0.1, 0.1, 0.1, 1.00},
         /*p5k */       { 0.05, 0.05, 0.05, 1.0},
@@ -88,7 +88,6 @@ static void draw_window(void *w_, void* user_data) {
 static void draw_lv2_knob(void *w_, void* user_data) {
     Widget_t *w = (Widget_t*)w_;
     X11_UI* ui = (X11_UI*)w->parent_struct;
-    ui->run_one_more = 10;
     int width = w->width-2;
     int height = w->height-2;
 
@@ -114,9 +113,9 @@ static void draw_lv2_knob(void *w_, void* user_data) {
     double pointer_off =knob_x/3.5;
     double radius = min(knob_x-pointer_off, knob_y-pointer_off) / 2;
     double lengh_x = (knobx+radius+pointer_off/2) - radius * sin(angle);
-    double lengh_y = (knoby+radius+pointer_off/2) + radius * cos(angle);
+    double lengh_y = (knoby-4+radius+pointer_off/2) + radius * cos(angle);
     double radius_x = (knobx+radius+pointer_off/2) - radius/ 1.18 * sin(angle);
-    double radius_y = (knoby+radius+pointer_off/2) + radius/ 1.18 * cos(angle);
+    double radius_y = (knoby-4+radius+pointer_off/2) + radius/ 1.18 * cos(angle);
     cairo_pattern_t* pat;
     cairo_new_path (w->crb);
 
@@ -128,7 +127,7 @@ static void draw_lv2_knob(void *w_, void* user_data) {
     cairo_pattern_add_color_stop_rgba (pat, 0,  ui->kp->p5f[0],ui->kp->p5f[1],ui->kp->p5f[2],ui->kp->p5f[3]);
 
     cairo_scale (w->crb, 0.95, 1.05);
-    cairo_arc(w->crb,knobx1+arc_offset/2, knoby1-arc_offset, knob_x/2.2, 0, 2 * M_PI );
+    cairo_arc(w->crb,knobx1+arc_offset/2, knoby1-arc_offset-5, knob_x/2.2, 0, 2 * M_PI );
     cairo_set_source (w->crb, pat);
     cairo_fill_preserve (w->crb);
     cairo_set_source_rgb (w->crb, 0.1, 0.1, 0.1); 
@@ -146,7 +145,7 @@ static void draw_lv2_knob(void *w_, void* user_data) {
     cairo_pattern_add_color_stop_rgba (pat, 0.75, ui->kp->p4k[0],ui->kp->p4k[1],ui->kp->p4k[2],ui->kp->p4k[3]);
     cairo_pattern_add_color_stop_rgba (pat, 1, ui->kp->p5k[0],ui->kp->p5k[1],ui->kp->p5k[2],ui->kp->p5k[3]);
 
-    cairo_arc(w->crb,knobx1, knoby1, knob_x/2.6, 0, 2 * M_PI );
+    cairo_arc(w->crb,knobx1, knoby1-5, knob_x/2.6, 0, 2 * M_PI );
     cairo_set_source (w->crb, pat);
     cairo_fill_preserve (w->crb);
     cairo_set_source_rgb (w->crb, 0.1, 0.1, 0.1); 
@@ -181,7 +180,7 @@ static void draw_lv2_knob(void *w_, void* user_data) {
         }
         cairo_set_font_size (w->crb, w->app->small_font/w->scale.ascale);
         cairo_text_extents(w->crb, s, &extents);
-        cairo_move_to (w->crb, knobx1-extents.width/2, knoby1+extents.height/2);
+        cairo_move_to (w->crb, knobx1-extents.width/2, knoby1-5+extents.height/2);
         cairo_show_text(w->crb, s);
         cairo_new_path (w->crb);
     }
@@ -391,6 +390,8 @@ static LV2UI_Handle instantiate(const LV2UI_Descriptor * descriptor,
         return NULL;
     }
 
+    ui->run_one_more = 10;
+    ui->pitch_scroll = 0;
     ui->parentXwindow = 0;
     ui->private_ptr = NULL;
     LV2_URID_Map* map = NULL;

@@ -662,13 +662,13 @@ static void keyboard_motion(void *w_, void* xmotion_, void* user_data) {
                             if (keys->send_key>=0 && keys->send_key<128) {
                                 if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) 
                                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
-                                keys->mk_send_note(p, &keys->send_key,0x80);
+                                keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
                             }
                             keys->active_key = keys->prelight_key;
                             keys->send_key = keys->active_key;
                             keys->last_active_key = keys->active_key;
                             if (keys->send_key>=0 && keys->send_key<128)
-                                keys->mk_send_note(p, &keys->send_key,0x90);
+                                keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
                         }
                     }
                     catchit = true;
@@ -712,13 +712,13 @@ static void keyboard_motion(void *w_, void* xmotion_, void* user_data) {
                         if (keys->send_key>=0 && keys->send_key<128) {
                             if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) 
                                 set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
-                            keys->mk_send_note(p, &keys->send_key,0x80);
+                            keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
                         }
                         keys->active_key = keys->prelight_key;
                         keys->send_key = keys->active_key;
                         keys->last_active_key = keys->active_key;
                         if (keys->send_key>=0 && keys->send_key<128)
-                            keys->mk_send_note(p, &keys->send_key,0x90);
+                            keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
                     }
                 }
                 if (keys->prelight_key != keys->new_prelight_key ||
@@ -785,7 +785,7 @@ static void key_press(void *w_, void *key_, void *user_data) {
             set_key_in_matrix(keys->key_matrix,(int)outkey+keys->octave,true);
             keys->send_key = (int)outkey+keys->octave;
             if (keys->send_key>=0 && keys->send_key<128)
-                keys->mk_send_note(p, &keys->send_key,0x90);
+                keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
             //expose_widget(w);
         } 
         if (sym == XK_space) {
@@ -812,7 +812,7 @@ static void key_release(void *w_, void *key_, void *user_data) {
         set_key_in_matrix(keys->key_matrix,(int)outkey+keys->octave,false);
         keys->send_key = (int)outkey+keys->octave;
         if (keys->send_key>=0 && keys->send_key<128)
-            keys->mk_send_note(p, &keys->send_key,0x80);
+            keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
         //expose_widget(w);
     }
 }
@@ -837,17 +837,17 @@ static void button_pressed_keyboard(void *w_, void* button_, void* user_data) {
             keys->send_key = keys->active_key;
             keys->last_active_key = keys->active_key;
             if (keys->send_key>=0 && keys->send_key<128)
-                keys->mk_send_note(p, &keys->send_key,0x90);
+                keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
             //expose_widget(w);
         } else if (xbutton->button == Button3) {
             keys->send_key = keys->prelight_key;
             if (keys->send_key>=0 && keys->send_key<128) {
                 if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) {
                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
-                    keys->mk_send_note(p, &keys->send_key,0x80);
+                    keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
                 } else {
                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,true);
-                    keys->mk_send_note(p, &keys->send_key,0x90);
+                    keys->mk_send_note(p, 0x90, &keys->send_key, keys->velocity);
                 }
             }
         }
@@ -863,7 +863,7 @@ static void button_released_keyboard(void *w_, void* button_, void* user_data) {
         if(xbutton->button == Button1) {
             keys->send_key = keys->active_key;
             if (keys->send_key>=0 && keys->send_key<128) {
-                keys->mk_send_note(p, &keys->send_key,0x80);
+                keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
                 if (is_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key)) 
                     set_key_in_matrix(keys->in_key_matrix[keys->channel], keys->send_key,false);
             }
@@ -874,7 +874,7 @@ static void button_released_keyboard(void *w_, void* button_, void* user_data) {
         if(xbutton->button == Button1) {
             keys->send_key = keys->last_active_key;
             if (keys->send_key>=0 && keys->send_key<128) {
-                keys->mk_send_note(p, &keys->send_key,0x80);
+                keys->mk_send_note(p, 0x80, &keys->send_key, keys->velocity);
             }
             keys->last_active_key = -1;
         }
@@ -943,6 +943,7 @@ void add_keyboard(Widget_t *wid, const char * label) {
     MidiKeyboard *keys = (MidiKeyboard*)malloc(sizeof(MidiKeyboard));
     wid->parent_struct = keys;
     wid->flags |= HAS_MEM | NO_AUTOREPEAT;
+    keys->velocity = 0;
     keys->prelight_key = -1;
     keys->active_key = -1;
     keys->new_prelight_key = -1;

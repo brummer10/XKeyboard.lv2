@@ -101,6 +101,7 @@ typedef struct {
     void *private_ptr;
     int need_resize;
     int run_one_more;
+    int pitch_scroll;
 
     void *controller;
     LV2UI_Write_Function write_function;
