@@ -59,6 +59,8 @@ typedef struct {
     int key_size;
     int key_offset;
     unsigned long key_matrix[4];
+    unsigned long minor_chord_key_matrix[4];
+    unsigned long major_chord_key_matrix[4];
     unsigned long in_key_matrix[16][4];
     long custom_keys[128][2];
 
