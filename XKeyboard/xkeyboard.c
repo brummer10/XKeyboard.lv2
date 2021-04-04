@@ -843,6 +843,11 @@ static void key_release(void *w_, void *key_, void *user_data) {
     if (!w) return;
     MidiKeyboard *keys = (MidiKeyboard*)w->parent_struct;
     XKeyEvent *key = (XKeyEvent*)key_;
+    if (key->state & ShiftMask) {
+        add_minor_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+    } else if (key->state & LockMask) {
+        add_major_chord(p, keys, keys->key_matrix,(int)keys->send_key,false);
+    }
     if (!key) return;
     int chord = 0;
     if (key->state & ShiftMask) {
